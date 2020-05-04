@@ -1,0 +1,17 @@
+{
+  "name": "pizza",
+  "version": "1.0.0",
+  "description": "A OOP refactoring kata",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mocha": "^7.1.2"
+  },
+  "devDependencies": {
+    "expect": "^25.5.0"
+  }
+}
