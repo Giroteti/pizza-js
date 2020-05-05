@@ -1,4 +1,5 @@
-const expect = require('expect');
+const expect = require('chai').expect;
+
 const {OrderAPizza, OrderAPizzaCommand} = require('../app/usecases/OrderAPizza');
 const {PizzaFlavors, Ingredients} = require('../app/domain/pizza');
 const PizzaOrderedEvent = require('../app/domain/PizzaOrderedEvent');
@@ -13,11 +14,11 @@ const PizzaRecipeRepository = require('../app/infrastructure/PizzaRecipeReposito
 const IngredientInventoryRepository = require('../app/infrastructure/IngredientInventoryRepository');
 
 describe('Order a pizza', function () {
-    describe('When pizzeria is found', () => {
-        describe('When customer is found', () => {
-            describe('When pizza is on the menu', () => {
-                describe('When enough ingredients', () => {
-                    it('should return a PizzaOrderedEvent', () => {
+    describe('When pizzeria is found', function() {
+        describe('When customer is found', function() {
+            describe('When pizza is on the menu', function() {
+                describe('When enough ingredients', function() {
+                    it('should return a PizzaOrderedEvent', function() {
                         // given
                         const pizzeriaRepository = new PizzeriaRepositoryForTest();
                         const customerRepository = new CustomerRepositoryForTest();
@@ -38,9 +39,9 @@ describe('Order a pizza', function () {
                         const event = orderAPizza.execute(command);
 
                         // then
-                        expect(event).toBeInstanceOf(PizzaOrderedEvent);
+                        expect(event).to.be.an.instanceof(PizzaOrderedEvent);
                     });
-                    it('should affect inventory', () => {
+                    it('should affect inventory', function() {
                         // given
                         const pizzeriaRepository = new PizzeriaRepositoryForTest();
                         const customerRepository = new CustomerRepositoryForTest();
@@ -64,11 +65,11 @@ describe('Order a pizza', function () {
                         }
 
                         // then
-                        expect(event).toBeInstanceOf(NotEnoughIngredientsEvent);
+                        expect(event).to.be.an.instanceof(NotEnoughIngredientsEvent);
                     });
                 });
-                describe('When not enough ingredients', () => {
-                    it('should return a NotEnoughIngredientsEvent', () => {
+                describe('When not enough ingredients', function() {
+                    it('should return a NotEnoughIngredientsEvent', function() {
                         // given
                         const pizzeriaRepository = new PizzeriaRepositoryForTest();
                         const customerRepository = new CustomerRepositoryForTest();
@@ -89,12 +90,12 @@ describe('Order a pizza', function () {
                         const event = orderAPizza.execute(command);
 
                         // then
-                        expect(event).toBeInstanceOf(NotEnoughIngredientsEvent);
+                        expect(event).to.be.an.instanceof(NotEnoughIngredientsEvent);
                     });
                 });
             });
-            describe('When pizza is not on the menu', () => {
-                it('should return a PizzaNotOnTheMenuEvent', () => {
+            describe('When pizza is not on the menu', function() {
+                it('should return a PizzaNotOnTheMenuEvent', function() {
                     // given
                     const pizzeriaRepository = new PizzeriaRepositoryForTest();
                     const customerRepository = new CustomerRepositoryForTest();
@@ -110,12 +111,12 @@ describe('Order a pizza', function () {
                     const event = orderAPizza.execute(command);
 
                     // then
-                    expect(event).toBeInstanceOf(PizzaNotOnTheMenuEvent);
+                    expect(event).to.be.an.instanceof(PizzaNotOnTheMenuEvent);
                 });
             });
         });
-        describe('When customer it not found', () => {
-            it('should return a CustomerNotFoundEvent', () => {
+        describe('When customer it not found', function() {
+            it('should return a CustomerNotFoundEvent', function() {
                 // given
                 const pizzeriaRepository = new PizzeriaRepositoryForTest();
                 const customerRepository = new CustomerRepositoryForTest();
@@ -126,12 +127,12 @@ describe('Order a pizza', function () {
                 const event = orderAPizza.execute(command);
 
                 // then
-                expect(event).toBeInstanceOf(CustomerNotFoundEvent);
+                expect(event).to.be.an.instanceof(CustomerNotFoundEvent);
             });
         });
     });
-    describe('When pizzeria is not found', () => {
-        it('should return a PizzeriaNotFoundEvent', () => {
+    describe('When pizzeria is not found', function() {
+        it('should return a PizzeriaNotFoundEvent', function() {
             // given
             const pizzeriaRepository = new PizzeriaRepositoryForTest();
             const orderAPizza = new OrderAPizza(pizzeriaRepository);
@@ -141,7 +142,7 @@ describe('Order a pizza', function () {
             const event = orderAPizza.execute(command);
 
             // then
-            expect(event).toBeInstanceOf(PizzeriaNotFoundEvent);
+            expect(event).to.be.an.instanceof(PizzeriaNotFoundEvent);
         });
     });
 
