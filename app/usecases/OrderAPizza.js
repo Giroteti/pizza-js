@@ -4,17 +4,22 @@ const CustomerNotFoundEvent = require('../domain/CustomerNotFoundEvent');
 const PizzaNotOnTheMenuEvent = require('../domain/PizzaNotOnTheMenuEvent');
 const NotEnoughIngredientsEvent = require('../domain/NotEnoughIngredientsEvent');
 const PaymentFailedEvent = require('../domain/PaymentFailedEvent');
+const { Order, OrderStatuses } = require('../domain/order');
 
 module.exports = {
     OrderAPizza: class OrderAPizza {
         constructor(
+            idGenerator,
+            orderRepository,
             pizzeriaRepository,
             customerRepository,
             menuRepository,
             pizzaRecipeRepository,
             ingredientInventoryRepository,
-            paymentClient
+            paymentClient,
         ) {
+            this.idGenerator = idGenerator;
+            this.orderRepository = orderRepository;
             this.pizzeriaRepository = pizzeriaRepository;
             this.customerRepository = customerRepository;
             this.menuRepository = menuRepository;
@@ -23,19 +28,31 @@ module.exports = {
             this.paymentClient = paymentClient;
         }
         execute(command) {
+            const order = new Order(
+                this.idGenerator.next(),
+                command.customerId,
+                command.pizzeriaId,
+                command.pizzaFlavor
+            );
             const pizzeria = this.pizzeriaRepository.get(command.pizzeriaId);
             if (pizzeria == null) {
+                order.status = OrderStatuses.ON_ERROR;
+                this.orderRepository.save(order);
                 return new PizzeriaNotFoundEvent();
             }
 
             const customer = this.customerRepository.get(command.customerId);
             if (customer == null) {
+                order.status = OrderStatuses.ON_ERROR;
+                this.orderRepository.save(order);
                 return new CustomerNotFoundEvent();
             }
 
             const menu = this.menuRepository.getByPizzeriaId(command.pizzeriaId);
             const pizza = menu.find(p => p.flavor === command.pizzaFlavor);
             if (pizza == null) {
+                order.status = OrderStatuses.ON_ERROR;
+                this.orderRepository.save(order);
                 return new PizzaNotOnTheMenuEvent();
             }
 
@@ -45,6 +62,8 @@ module.exports = {
                 const ingredientToCheck = recipe[i];
                 const ingredientInInventory = inventory.find(i => i.ingredientId === ingredientToCheck);
                 if (ingredientInInventory == null || ingredientInInventory.quantity <= 0) {
+                    order.status = OrderStatuses.ON_ERROR;
+                    this.orderRepository.save(order);
                     return new NotEnoughIngredientsEvent();
                 }
             }
@@ -53,9 +72,13 @@ module.exports = {
             try {
                 this.paymentClient.pay(customer.rib, pizzeria.rib, pizza.price);
             } catch (e) {
+                order.status = OrderStatuses.ON_ERROR;
+                this.orderRepository.save(order);
                 return new PaymentFailedEvent();
             }
 
+            order.status = OrderStatuses.FULFILLED;
+            this.orderRepository.save(order);
             return new PizzaOrderedEvent();
         }
     },
