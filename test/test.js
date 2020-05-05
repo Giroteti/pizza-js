@@ -214,6 +214,14 @@ describe('Order a pizza', function () {
             expect(event).to.be.instanceof(PizzeriaNotFoundEvent);
         });
     });
+
+    // TODO
+    // When payment succeed
+    // When payment fails
+    // Register order status : CREATED, IN_PROGESS, DONE
+    // Fidelity program :
+    //     Customer.isPremium : boolean
+    //     Restaurant.premiumCustomerDiscount : ex: 0.2
 });
 
 class OrderRepositoryForTest extends OrderRepository {
