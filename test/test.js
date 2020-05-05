@@ -40,7 +40,7 @@ describe('Order a pizza', function () {
     let paymentClient;
     let orderAPizza;
 
-    beforeEach(() => {
+    beforeEach(function() {
         idGenerator = new IdGenerator();
         orderRepository = new OrderRepositoryForTest();
         pizzeriaRepository = new PizzeriaRepository();
