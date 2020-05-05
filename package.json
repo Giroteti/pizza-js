@@ -4,15 +4,15 @@
   "description": "An OOP refactoring kata",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "mocha --recursive --exit"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.15",
-    "mocha": "^7.1.2"
   },
   "devDependencies": {
-    "expect": "^25.5.0"
+    "chai": "^4.2.0",
+    "mocha": "^7.1.2"
   }
 }
