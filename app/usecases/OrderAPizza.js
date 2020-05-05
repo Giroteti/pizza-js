@@ -46,8 +46,6 @@ module.exports = {
             }
             this.ingredientInventoryRepository.updateByPizzeriaId(command.pizzeriaId, inventory);
 
-
-
             return new PizzaOrderedEvent();
         }
     },

@@ -146,15 +146,12 @@ describe('Order a pizza', function () {
     });
 
     // TODO
-    // Make pizza (update ingredients stocks)
-    // When payment mean is accepted by restaurant
-    // When payment mean is not accepted by restaurant
-    // When enough money to pay
-    // When not enough money to pay
-    // Pay (update pizzeria and owner account balances)
-    // Register order
-    // Customer.isPremium : boolean
-    // Restaurant.premiumCustomerDiscount : ex: 0.2
+    // When payment succeed
+    // When payment fails
+    // Register order status : CREATED, IN_PROGESS, DONE
+    // Fidelity program :
+    //     Customer.isPremium : boolean
+    //     Restaurant.premiumCustomerDiscount : ex: 0.2
 });
 
 class PizzeriaRepositoryForTest extends PizzeriaRepository {
