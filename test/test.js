@@ -1,6 +1,6 @@
 const expect = require('expect');
+const _ = require("lodash");
 const {OrderAPizza, OrderAPizzaCommand} = require('../app/usecases/OrderAPizza');
-const {PizzaFlavors, Ingredients} = require('../app/domain/pizza');
 const {OrderStatuses} = require('../app/domain/order');
 const PizzaOrderedEvent = require('../app/domain/PizzaOrderedEvent');
 const PizzeriaNotFoundEvent = require('../app/domain/PizzeriaNotFoundEvent');
@@ -16,8 +16,23 @@ const MenuRepository = require('../app/infrastructure/MenuRepository');
 const PizzaRecipeRepository = require('../app/infrastructure/PizzaRecipeRepository');
 const IngredientInventoryRepository = require('../app/infrastructure/IngredientInventoryRepository');
 const PaymentClient = require('../app/infrastructure/PaymentClient');
+const customerDataTable = require('./tables/customers');
+const pizzerieDataTable = require('./tables/pizzerie');
+const pizzeDataTable = require('./tables/pizze');
+const menusDataTable = require('./tables/menus');
+const recipesDataTable = require('./tables/recipes');
+const inventoriesDataTable = require('./tables/inventories');
+const ordersDataTable = require('./tables/orders');
 
 describe('Order a pizza', function () {
+
+    const margheritaPriceAtDaMarco = menusDataTable[0].price;
+    const pizzeriaDaMarco = pizzerieDataTable[0];
+    const customer = customerDataTable[0];
+    const margherita = pizzeDataTable[0].id;
+    const quattroFormaggi = pizzeDataTable[1].id;
+    const regina = pizzeDataTable[2].id;
+
     let idGenerator;
     let orderRepository;
     let pizzeriaRepository;
@@ -36,7 +51,7 @@ describe('Order a pizza', function () {
         menuRepository = new MenuRepositoryForTest();
         pizzaRecipeRepository = new PizzaRecipeRepositoryForTest();
         ingredientInventoryRepository = new IngredientInventoryRepositoryForTest();
-        paymentClient = new PaymentClientForTest();
+        paymentClient = new SuccessfulPaymentClientForTest();
         orderAPizza = new OrderAPizza(
             idGenerator,
             orderRepository,
@@ -58,8 +73,8 @@ describe('Order a pizza', function () {
                             // given
                             const command = new OrderAPizzaCommand(
                                 pizzeriaDaMarco.id,
-                                customerWithValidRib.id,
-                                PizzaFlavors.MARGHERITA
+                                customer.id,
+                                margherita
                             );
 
                             // when
@@ -72,8 +87,8 @@ describe('Order a pizza', function () {
                             // given
                             const command = new OrderAPizzaCommand(
                                 pizzeriaDaMarco.id,
-                                customerWithValidRib.id,
-                                PizzaFlavors.MARGHERITA
+                                customer.id,
+                                margherita
                             );
 
                             // when
@@ -86,19 +101,19 @@ describe('Order a pizza', function () {
                             // given
                             const command = new OrderAPizzaCommand(
                                 pizzeriaDaMarco.id,
-                                customerWithValidRib.id,
-                                PizzaFlavors.MARGHERITA
+                                customer.id,
+                                margherita
                             );
 
                             // when
                             const event = orderAPizza.execute(command);
 
                             // then
-                            expect(paymentClient.hasPaymentBeenPerformed(customerWithValidRib.rib, pizzeriaDaMarco.rib, margheritaPriceAtDaMarco))
+                            expect(paymentClient.hasPaymentBeenPerformed(customer.rib, pizzeriaDaMarco.rib, margheritaPriceAtDaMarco))
                         });
                         it('should affect inventory', () => {
                             // given
-                            const command = new OrderAPizzaCommand(pizzeriaDaMarco.id, customerWithValidRib.id, PizzaFlavors.MARGHERITA);
+                            const command = new OrderAPizzaCommand(pizzeriaDaMarco.id, customer.id, margherita);
 
                             // when
                             let event = null;
@@ -113,10 +128,22 @@ describe('Order a pizza', function () {
                     describe('When payment fails', () => {
                         it('should return a PaymentFailedEvent', () => {
                             // given
+                            let paymentClient = new FaultyPaymentClientForTest();
+                            let ingredientInventoryRepository = new IngredientInventoryRepositoryForTest();
+                            let orderAPizza = new OrderAPizza(
+                                idGenerator,
+                                orderRepository,
+                                pizzeriaRepository,
+                                customerRepository,
+                                menuRepository,
+                                pizzaRecipeRepository,
+                                ingredientInventoryRepository,
+                                paymentClient
+                            );
                             const command = new OrderAPizzaCommand(
                                 pizzeriaDaMarco.id,
-                                customerWithInvalidRib.id,
-                                PizzaFlavors.MARGHERITA
+                                customer.id,
+                                margherita
                             );
 
                             // when
@@ -132,8 +159,8 @@ describe('Order a pizza', function () {
                         // given
                         const command = new OrderAPizzaCommand(
                             pizzeriaDaMarco.id,
-                            customerWithValidRib.id,
-                            PizzaFlavors.QUATTRO_FORMAGGI
+                            customer.id,
+                            quattroFormaggi
                         );
 
                         // when
@@ -149,8 +176,8 @@ describe('Order a pizza', function () {
                     // given
                     const command = new OrderAPizzaCommand(
                         pizzeriaDaMarco.id,
-                        customerWithValidRib.id,
-                        PizzaFlavors.REGINA
+                        customer.id,
+                        regina
                     );
 
                     // when
@@ -193,24 +220,6 @@ describe('Order a pizza', function () {
     });
 });
 
-const margheritaPriceAtDaMarco = 10;
-const pizzeriaDaMarco = {
-    id: Symbol("pizzeria da marco"),
-    name: "Da Marco",
-    rib: Symbol("rib")
-}
-
-const customerWithValidRib = {
-    id: Symbol("customer with valid rib"),
-    name: "Leonardo",
-    rib: Symbol("valid rib")
-}
-
-const customerWithInvalidRib = {
-    id: Symbol("customer with invalid rib"),
-    name: "Michelangelo",
-    rib: Symbol("invalid rib")
-}
 
 class IdGeneratorForTest extends IdGenerator {
     #lastId = 0;
@@ -221,14 +230,22 @@ class IdGeneratorForTest extends IdGenerator {
 }
 
 class OrderRepositoryForTest extends OrderRepository {
-    #orders = [];
+    #ordersDataTable = _.cloneDeep(ordersDataTable);
 
     save(order) {
-        this.#orders.push(order);
+        this.#ordersDataTable.push(
+            {
+                id: order.id,
+                customerId: order.customerId,
+                pizzeriaId: order.pizzeriaId,
+                pizzaFlavor: order.pizzaFlavor,
+                status: order.status
+            }
+        );
     }
 
     getOrderStatus(orderId) {
-        const order = this.#orders.find(o => o.id === orderId);
+        const order = this.#ordersDataTable.find(o => o.id === orderId);
         if (order != null) {
             return order.status;
         } else {
@@ -238,124 +255,65 @@ class OrderRepositoryForTest extends OrderRepository {
 }
 
 class PizzeriaRepositoryForTest extends PizzeriaRepository {
-    #pizzerie = [
-        pizzeriaDaMarco
-    ];
-
     get(id) {
-        return this.#pizzerie.find(p => p.id === id);
+        return pizzerieDataTable.find(p => p.id === id);
     }
 }
 
 class CustomerRepositoryForTest extends CustomerRepository {
-    #customers = [
-        customerWithValidRib,
-        customerWithInvalidRib
-    ];
-
     get(id) {
-        return this.#customers.find(c => c.id === id);
+        return customerDataTable.find(c => c.id === id);
     }
 }
 
 class MenuRepositoryForTest extends MenuRepository {
-    #menus = [
-        {
-            pizzeriaId: pizzeriaDaMarco.id,
-            pizze: [
-                {flavor: PizzaFlavors.MARGHERITA, price: margheritaPriceAtDaMarco},
-                {flavor: PizzaFlavors.QUATTRO_FORMAGGI, price: 12}
-            ]
-        }
-    ];
-
     getByPizzeriaId(pizzeriaId) {
-        const menu = this.#menus.find(m => m.pizzeriaId === pizzeriaId);
-        if (menu != null) {
-            return menu.pizze;
-        } else {
-            return null;
-        }
+        const menu = menusDataTable.filter(m => m.pizzeriaId === pizzeriaId);
+        return menu.map(m => {
+                return {
+                    flavor: m.pizzaId,
+                    price: m.price
+                }
+            }
+        );
     }
 }
 
 class PizzaRecipeRepositoryForTest extends PizzaRecipeRepository {
-    #recipes = [
-        {
-            pizzaFlavorId: PizzaFlavors.MARGHERITA,
-            ingredients: [
-                Ingredients.DOUGH,
-                Ingredients.TOMATO_SAUCE,
-                Ingredients.MOZZARELLA,
-                Ingredients.BASIL
-            ]
-        },
-        {
-            pizzaFlavorId: PizzaFlavors.QUATTRO_FORMAGGI,
-            ingredients: [
-                Ingredients.DOUGH,
-                Ingredients.MOZZARELLA,
-                Ingredients.GORGONZOLA,
-                Ingredients.ASIAGO,
-                Ingredients.PROVOLA
-            ]
-        }
-    ]
-
     getByPizzaFlavorId(pizzaFlavorId) {
-        const recipe = this.#recipes.find(r => r.pizzaFlavorId === pizzaFlavorId);
-        if (recipe != null) {
-            return recipe.ingredients;
-        } else {
-            return null;
-        }
+        return recipesDataTable
+            .filter(r => r.pizzaId === pizzaFlavorId)
+            .map(r => r.ingredientId);
     }
 }
 
 class IngredientInventoryRepositoryForTest extends IngredientInventoryRepository {
-    #inventories = [
-        {
-            pizzeriaId: pizzeriaDaMarco.id,
-            inventory: [
-                {
-                    ingredientId: Ingredients.DOUGH,
-                    quantity: 3
-                },
-                {
-                    ingredientId: Ingredients.TOMATO_SAUCE,
-                    quantity: 10
-                },
-                {
-                    ingredientId: Ingredients.MOZZARELLA,
-                    quantity: 10
-                },
-                {
-                    ingredientId: Ingredients.BASIL,
-                    quantity: 10
-                }
-            ]
-        }
-    ];
+    #inventoriesDataTable = _.cloneDeep(inventoriesDataTable);
 
     getByPizzeriaId(pizzeriaId) {
-        const inventory = this.#inventories.find(i => i.pizzeriaId === pizzeriaId);
-        if (inventory != null) {
-            return inventory.inventory;
-        } else {
-            return null;
-        }
+        return this.#inventoriesDataTable
+            .filter(i => i.pizzeriaId === pizzeriaId)
+            .map(i => {
+                return {
+                    ingredientId: i.ingredientId,
+                    quantity: i.quantity
+                }
+            });
     }
 
     decrementIngredientsOfPizzeria(pizzeriaId, ingredients) {
         for (const ingredientToDecrementIndex in ingredients) {
-            const inventoryIndex = this.#inventories.findIndex(i => i.pizzeriaId === pizzeriaId);
-            const ingredientIndex = this.#inventories[inventoryIndex].inventory.findIndex(i => i.ingredientId === ingredients[ingredientToDecrementIndex]);
-            this.#inventories[inventoryIndex].inventory[ingredientIndex].quantity--;
+            const inventoryIndex = this.#inventoriesDataTable
+                .findIndex(i =>
+                    i.pizzeriaId === pizzeriaId
+                    && i.ingredientId === ingredients[ingredientToDecrementIndex]
+                );
+            this.#inventoriesDataTable[inventoryIndex].quantity--;
         }
     }
 }
 
-class PaymentClientForTest extends PaymentClient {
+class SuccessfulPaymentClientForTest extends PaymentClient {
     #payments = [];
 
     hasPaymentBeenPerformed(customerRib, pizzeriaRib, amount) {
@@ -367,10 +325,16 @@ class PaymentClientForTest extends PaymentClient {
     }
 
     pay(customerRib, pizzeriaRib, amount) {
-        if (customerRib === customerWithInvalidRib.rib) {
+        if (customerRib == null) {
             throw new Error('payment failed');
         } else {
             this.#payments.push({customerRib, pizzeriaRib, amount});
         }
+    }
+}
+
+class FaultyPaymentClientForTest extends PaymentClient {
+    pay(customerRib, pizzeriaRib, amount) {
+        throw new Error('payment failed');
     }
 }
