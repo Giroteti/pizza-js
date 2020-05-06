@@ -1,5 +1,7 @@
 module.exports = class IdGenerator {
+    #lastId = 0;
+
     next() {
-        throw new Error("To be implemented");
+        return ++this.#lastId;
     }
 }

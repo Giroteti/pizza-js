@@ -1,7 +1,7 @@
 const expect = require('expect');
 const _ = require("lodash");
 const {OrderAPizza, OrderAPizzaCommand} = require('../app/usecases/OrderAPizza');
-const {OrderStatuses} = require('../app/domain/order');
+const {OrderStatuses} = require('../app/domain/order'   );
 const PizzaOrderedEvent = require('../app/domain/PizzaOrderedEvent');
 const PizzeriaNotFoundEvent = require('../app/domain/PizzeriaNotFoundEvent');
 const CustomerNotFoundEvent = require('../app/domain/CustomerNotFoundEvent');
@@ -16,13 +16,10 @@ const MenuRepository = require('../app/infrastructure/MenuRepository');
 const PizzaRecipeRepository = require('../app/infrastructure/PizzaRecipeRepository');
 const IngredientInventoryRepository = require('../app/infrastructure/IngredientInventoryRepository');
 const PaymentClient = require('../app/infrastructure/PaymentClient');
-const customerDataTable = require('./tables/customers');
-const pizzerieDataTable = require('./tables/pizzerie');
-const pizzeDataTable = require('./tables/pizze');
-const menusDataTable = require('./tables/menus');
-const recipesDataTable = require('./tables/recipes');
-const inventoriesDataTable = require('./tables/inventories');
-const ordersDataTable = require('./tables/orders');
+const customerDataTable = require('../app/infrastructure/tables/customers');
+const pizzerieDataTable = require('../app/infrastructure/tables/pizzerie');
+const pizzeDataTable = require('../app/infrastructure/tables/pizze');
+const menusDataTable = require('../app/infrastructure/tables/menus');
 
 describe('Order a pizza', function () {
 
@@ -44,13 +41,13 @@ describe('Order a pizza', function () {
     let orderAPizza;
 
     beforeEach(() => {
-        idGenerator = new IdGeneratorForTest();
+        idGenerator = new IdGenerator();
         orderRepository = new OrderRepositoryForTest();
-        pizzeriaRepository = new PizzeriaRepositoryForTest();
-        customerRepository = new CustomerRepositoryForTest();
-        menuRepository = new MenuRepositoryForTest();
-        pizzaRecipeRepository = new PizzaRecipeRepositoryForTest();
-        ingredientInventoryRepository = new IngredientInventoryRepositoryForTest();
+        pizzeriaRepository = new PizzeriaRepository();
+        customerRepository = new CustomerRepository();
+        menuRepository = new MenuRepository();
+        pizzaRecipeRepository = new PizzaRecipeRepository();
+        ingredientInventoryRepository = new IngredientInventoryRepository();
         paymentClient = new SuccessfulPaymentClientForTest();
         orderAPizza = new OrderAPizza(
             idGenerator,
@@ -129,7 +126,6 @@ describe('Order a pizza', function () {
                         it('should return a PaymentFailedEvent', () => {
                             // given
                             let paymentClient = new FaultyPaymentClientForTest();
-                            let ingredientInventoryRepository = new IngredientInventoryRepositoryForTest();
                             let orderAPizza = new OrderAPizza(
                                 idGenerator,
                                 orderRepository,
@@ -220,95 +216,13 @@ describe('Order a pizza', function () {
     });
 });
 
-
-class IdGeneratorForTest extends IdGenerator {
-    #lastId = 0;
-
-    next() {
-        return ++this.#lastId;
-    }
-}
-
 class OrderRepositoryForTest extends OrderRepository {
-    #ordersDataTable = _.cloneDeep(ordersDataTable);
-
-    save(order) {
-        this.#ordersDataTable.push(
-            {
-                id: order.id,
-                customerId: order.customerId,
-                pizzeriaId: order.pizzeriaId,
-                pizzaFlavor: order.pizzaFlavor,
-                status: order.status
-            }
-        );
-    }
-
     getOrderStatus(orderId) {
-        const order = this.#ordersDataTable.find(o => o.id === orderId);
+        const order = this.dataSource.find(o => o.id === orderId);
         if (order != null) {
             return order.status;
         } else {
             return null;
-        }
-    }
-}
-
-class PizzeriaRepositoryForTest extends PizzeriaRepository {
-    get(id) {
-        return pizzerieDataTable.find(p => p.id === id);
-    }
-}
-
-class CustomerRepositoryForTest extends CustomerRepository {
-    get(id) {
-        return customerDataTable.find(c => c.id === id);
-    }
-}
-
-class MenuRepositoryForTest extends MenuRepository {
-    getByPizzeriaId(pizzeriaId) {
-        const menu = menusDataTable.filter(m => m.pizzeriaId === pizzeriaId);
-        return menu.map(m => {
-                return {
-                    flavor: m.pizzaId,
-                    price: m.price
-                }
-            }
-        );
-    }
-}
-
-class PizzaRecipeRepositoryForTest extends PizzaRecipeRepository {
-    getByPizzaFlavorId(pizzaFlavorId) {
-        return recipesDataTable
-            .filter(r => r.pizzaId === pizzaFlavorId)
-            .map(r => r.ingredientId);
-    }
-}
-
-class IngredientInventoryRepositoryForTest extends IngredientInventoryRepository {
-    #inventoriesDataTable = _.cloneDeep(inventoriesDataTable);
-
-    getByPizzeriaId(pizzeriaId) {
-        return this.#inventoriesDataTable
-            .filter(i => i.pizzeriaId === pizzeriaId)
-            .map(i => {
-                return {
-                    ingredientId: i.ingredientId,
-                    quantity: i.quantity
-                }
-            });
-    }
-
-    decrementIngredientsOfPizzeria(pizzeriaId, ingredients) {
-        for (const ingredientToDecrementIndex in ingredients) {
-            const inventoryIndex = this.#inventoriesDataTable
-                .findIndex(i =>
-                    i.pizzeriaId === pizzeriaId
-                    && i.ingredientId === ingredients[ingredientToDecrementIndex]
-                );
-            this.#inventoriesDataTable[inventoryIndex].quantity--;
         }
     }
 }
