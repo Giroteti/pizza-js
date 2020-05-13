@@ -42,7 +42,12 @@ class Pizzeria {
     cookPizza(pizzaId) {
         const item = this.#menu[pizzaId];
         this.#inventory.decrementIngredients(item.pizza.ingredients);
-        return item.pizza;
+    }
+
+
+    getPizzaPrice(pizzaId) {
+        const item = this.#menu[pizzaId];
+        return item.price;
     }
 
     getSnapshot() {
@@ -75,7 +80,7 @@ class Pizza {
 
     constructor(id, name, ingredients) {
         if (id == null) {
-           throw new Error("id should not be null");
+            throw new Error("id should not be null");
         }
         if (name == null) {
             throw new Error("name should not be null");
@@ -92,6 +97,7 @@ class Pizza {
 class Ingredient {
     id
     name
+
     constructor(id, name) {
         if (id == null) {
             throw new Error('id should not be null');
@@ -133,7 +139,9 @@ class Inventory {
     }
 
     getSnapshot() {
-        return this.#entries.map(e => {return {ingredientId: e.ingredientId, quantity: e.quantity}});
+        return this.#entries.map(e => {
+            return {ingredientId: e.ingredientId, quantity: e.quantity}
+        });
     }
 }
 

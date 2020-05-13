@@ -4,7 +4,7 @@ const CustomerNotFoundEvent = require('../domain/events/CustomerNotFoundEvent');
 const PizzaNotOnTheMenuEvent = require('../domain/events/PizzaNotOnTheMenuEvent');
 const NotEnoughIngredientsEvent = require('../domain/events/NotEnoughIngredientsEvent');
 const PaymentFailedEvent = require('../domain/events/PaymentFailedEvent');
-const { Order, OrderStatuses } = require('../domain/order');
+const { Order } = require('../domain/order');
 
 module.exports = {
     OrderAPizza: class OrderAPizza {
@@ -28,46 +28,45 @@ module.exports = {
                 command.pizzeriaId,
                 command.pizzaFlavor
             );
+
             const pizzeria = this.pizzeriaRepository.get(command.pizzeriaId);
             if (pizzeria == null) {
-                order.status = OrderStatuses.ON_ERROR;
+                order.fail();
                 this.orderRepository.save(order);
                 return new PizzeriaNotFoundEvent();
             }
 
             const customer = this.customerRepository.get(command.customerId);
             if (customer == null) {
-                order.status = OrderStatuses.ON_ERROR;
+                order.fail();
                 this.orderRepository.save(order);
                 return new CustomerNotFoundEvent();
             }
 
             if (!pizzeria.isPizzaOnTheMenu(command.pizzaFlavor)) {
-                order.status = OrderStatuses.ON_ERROR;
+                order.fail();
                 this.orderRepository.save(order);
                 return new PizzaNotOnTheMenuEvent();
             }
 
             if (!pizzeria.hasEnoughIngredientsToCookPizza(command.pizzaFlavor)) {
-                order.status = OrderStatuses.ON_ERROR;
+                order.fail();
                 this.orderRepository.save(order);
                 return new NotEnoughIngredientsEvent();
             }
 
-            const pizza = pizzeria.cookPizza(command.pizzaFlavor);
-            this.pizzeriaRepository.save(pizzeria);
-
             try {
-                this.paymentClient.pay(customer.iban, pizzeria.iban, pizza.price);
+                this.paymentClient.pay(customer.iban, pizzeria.iban, pizzeria.getPizzaPrice(command.pizzaFlavor));
+                pizzeria.cookPizza(command.pizzaFlavor);
+                order.fulfill();
+                this.orderRepository.save(order);
+                this.pizzeriaRepository.save(pizzeria);
+                return new PizzaOrderedEvent();
             } catch (e) {
-                order.status = OrderStatuses.ON_ERROR;
+                order.fail();
                 this.orderRepository.save(order);
                 return new PaymentFailedEvent();
             }
-
-            order.status = OrderStatuses.FULFILLED;
-            this.orderRepository.save(order);
-            return new PizzaOrderedEvent();
         }
     },
     OrderAPizzaCommand: class OrderAPizzaCommand{

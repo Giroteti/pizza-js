@@ -1,7 +1,6 @@
 const expect = require('chai').expect;
 const _ = require("lodash");
 const {OrderAPizza, OrderAPizzaCommand} = require('../../app/usecases/OrderAPizza');
-const {OrderStatuses} = require('../../app/domain/order');
 const PizzaOrderedEvent = require('../../app/domain/events/PizzaOrderedEvent');
 const PizzeriaNotFoundEvent = require('../../app/domain/events/PizzeriaNotFoundEvent');
 const CustomerNotFoundEvent = require('../../app/domain/events/CustomerNotFoundEvent');
@@ -39,7 +38,7 @@ describe('Order a pizza', function () {
 
     beforeEach(function () {
         idGenerator = new IdGenerator();
-        orderRepository = new OrderRepositoryForTest();
+        orderRepository = new OrderRepository();
         pizzeriaRepository = new PizzeriaRepository();
         customerRepository = new CustomerRepository();
         paymentClient = new SuccessfulPaymentClientForTest();
@@ -69,7 +68,7 @@ describe('Order a pizza', function () {
                             const event = orderAPizza.execute(command);
 
                             // then
-                            expect(orderRepository.getOrderStatus(1)).to.equal(OrderStatuses.FULFILLED);
+                            expect(orderRepository.get(1).isFulfilled()).to.equal(true);
                         });
                         it('should return a PizzaOrderedEvent', function() {
                             // given
@@ -206,17 +205,6 @@ describe('Order a pizza', function () {
         });
     });
 });
-
-class OrderRepositoryForTest extends OrderRepository {
-    getOrderStatus(orderId) {
-        const order = this.dataSource.find(o => o.id === orderId);
-        if (order != null) {
-            return order.status;
-        } else {
-            return null;
-        }
-    }
-}
 
 class SuccessfulPaymentClientForTest extends PaymentClient {
     #payments = [];
