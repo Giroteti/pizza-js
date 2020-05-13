@@ -1,25 +1,22 @@
 const expect = require('chai').expect;
 const _ = require("lodash");
-const {OrderAPizza, OrderAPizzaCommand} = require('../app/usecases/OrderAPizza');
-const {OrderStatuses} = require('../app/domain/order');
-const PizzaOrderedEvent = require('../app/domain/PizzaOrderedEvent');
-const PizzeriaNotFoundEvent = require('../app/domain/PizzeriaNotFoundEvent');
-const CustomerNotFoundEvent = require('../app/domain/CustomerNotFoundEvent');
-const PizzaNotOnTheMenuEvent = require('../app/domain/PizzaNotOnTheMenuEvent');
-const NotEnoughIngredientsEvent = require('../app/domain/NotEnoughIngredientsEvent');
-const PaymentFailedEvent = require('../app/domain/PaymentFailedEvent');
-const IdGenerator = require('../app/infrastructure/IdGenerator');
-const OrderRepository = require('../app/infrastructure/OrderRepository');
-const PizzeriaRepository = require('../app/infrastructure/PizzeriaRepository');
-const CustomerRepository = require('../app/infrastructure/CustomerRepository');
-const MenuRepository = require('../app/infrastructure/MenuRepository');
-const PizzaRecipeRepository = require('../app/infrastructure/PizzaRecipeRepository');
-const IngredientInventoryRepository = require('../app/infrastructure/IngredientInventoryRepository');
-const PaymentClient = require('../app/infrastructure/PaymentClient');
-const customerDataTable = require('../app/infrastructure/tables/customers');
-const pizzerieDataTable = require('../app/infrastructure/tables/pizzerie');
-const pizzeDataTable = require('../app/infrastructure/tables/pizze');
-const menusDataTable = require('../app/infrastructure/tables/menus');
+const {OrderAPizza, OrderAPizzaCommand} = require('../../app/usecases/OrderAPizza');
+const {OrderStatuses} = require('../../app/domain/order');
+const PizzaOrderedEvent = require('../../app/domain/events/PizzaOrderedEvent');
+const PizzeriaNotFoundEvent = require('../../app/domain/events/PizzeriaNotFoundEvent');
+const CustomerNotFoundEvent = require('../../app/domain/events/CustomerNotFoundEvent');
+const PizzaNotOnTheMenuEvent = require('../../app/domain/events/PizzaNotOnTheMenuEvent');
+const NotEnoughIngredientsEvent = require('../../app/domain/events/NotEnoughIngredientsEvent');
+const PaymentFailedEvent = require('../../app/domain/events/PaymentFailedEvent');
+const IdGenerator = require('../../app/infrastructure/IdGenerator');
+const OrderRepository = require('../../app/infrastructure/OrderRepository');
+const PizzeriaRepository = require('../../app/infrastructure/PizzeriaRepository');
+const CustomerRepository = require('../../app/infrastructure/CustomerRepository');
+const PaymentClient = require('../../app/infrastructure/PaymentClient');
+const customerDataTable = require('../../app/infrastructure/tables/customers');
+const pizzerieDataTable = require('../../app/infrastructure/tables/pizzerie');
+const pizzeDataTable = require('../../app/infrastructure/tables/pizze');
+const menusDataTable = require('../../app/infrastructure/tables/menus');
 
 describe('Order a pizza', function () {
 
@@ -45,18 +42,12 @@ describe('Order a pizza', function () {
         orderRepository = new OrderRepositoryForTest();
         pizzeriaRepository = new PizzeriaRepository();
         customerRepository = new CustomerRepository();
-        menuRepository = new MenuRepository();
-        pizzaRecipeRepository = new PizzaRecipeRepository();
-        ingredientInventoryRepository = new IngredientInventoryRepository();
         paymentClient = new SuccessfulPaymentClientForTest();
         orderAPizza = new OrderAPizza(
             idGenerator,
             orderRepository,
             pizzeriaRepository,
             customerRepository,
-            menuRepository,
-            pizzaRecipeRepository,
-            ingredientInventoryRepository,
             paymentClient
         );
     });
