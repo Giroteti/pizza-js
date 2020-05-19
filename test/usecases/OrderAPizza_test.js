@@ -1,21 +1,27 @@
 const expect = require('chai').expect;
 const _ = require("lodash");
-const {OrderAPizza, OrderAPizzaCommand} = require('../../app/usecases/OrderAPizza');
-const PizzaOrderedEvent = require('../../app/domain/events/PizzaOrderedEvent');
-const PizzeriaNotFoundEvent = require('../../app/domain/events/PizzeriaNotFoundEvent');
-const CustomerNotFoundEvent = require('../../app/domain/events/CustomerNotFoundEvent');
-const PizzaNotOnTheMenuEvent = require('../../app/domain/events/PizzaNotOnTheMenuEvent');
-const NotEnoughIngredientsEvent = require('../../app/domain/events/NotEnoughIngredientsEvent');
-const PaymentFailedEvent = require('../../app/domain/events/PaymentFailedEvent');
-const IdGenerator = require('../../app/infrastructure/IdGenerator');
-const OrderRepository = require('../../app/infrastructure/OrderRepository');
-const PizzeriaRepository = require('../../app/infrastructure/PizzeriaRepository');
-const CustomerRepository = require('../../app/infrastructure/CustomerRepository');
-const PaymentClient = require('../../app/infrastructure/PaymentClient');
-const customerDataTable = require('../../app/infrastructure/tables/customers');
-const pizzerieDataTable = require('../../app/infrastructure/tables/pizzerie');
-const pizzeDataTable = require('../../app/infrastructure/tables/pizze');
-const menusDataTable = require('../../app/infrastructure/tables/menus');
+const PaymentClient = require('../../app/payment/infrastructure/PaymentClient');
+const customerDataTable = require('../../app/shared-kernel/infrastructure/tables/customers');
+const pizzerieDataTable = require('../../app/shared-kernel/infrastructure/tables/pizzerie');
+const pizzeDataTable = require('../../app/shared-kernel/infrastructure/tables/pizze');
+const menusDataTable = require('../../app/shared-kernel/infrastructure/tables/menus');
+const EventDispatcher = require('../../app/shared-kernel/infrastructure/EventDispatcher');
+const {PlaceAnOrderCommand} = require('../../app/order-management/usecases/PlaceAnOrder');
+const OrderPlacedEvent = require('../../app/order-management/domain/events/OrderPlaced');
+const OrderAcceptedEvent = require('../../app/order-preparation/domain/events/OrderAccepted');
+const OrderRejectedEvent = require('../../app/order-preparation/domain/events/OrderRejected');
+const OrderPreparedEvent = require('../../app/order-preparation/domain/events/OrderPrepared');
+const PaymentFailedEvent = require('../../app/payment/domain/events/PaymentFailed');
+const PaymentSucceededEvent = require('../../app/payment/domain/events/PaymentSucceeded');
+const PizzeriaNotFoundEvent = require('../../app/order-management/domain/PizzeriaNotFound');
+const CustomerNotFoundEvent = require('../../app/order-management/domain/events/CustomerNotFound');
+const OrderFulfilledEvent = require('../../app/order-management/domain/events/OrderFulfilled');
+const PizzaNotOnTheMenuEvent = require('../../app/order-preparation/domain/events/PizzaNotOnTheMenu');
+const NotEnoughIngredientsEvent = require('../../app/order-preparation/domain/events/NotEnoughIngredients');
+const OrderManagementDependenciesInjection = require('../../app/order-management/infrastructure/DependenciesInjection');
+const OrderPreparationDependenciesInjection = require('../../app/order-preparation/infrastructure/DependenciesInjection');
+const PaymentDependenciesInjection = require('../../app/payment/infrastructure/DependenciesInjection');
+const OrderRepository = require('../../app/order-management/infrastructure/OrderRepository');
 
 describe('Order a pizza', function () {
 
@@ -26,188 +32,216 @@ describe('Order a pizza', function () {
     const quattroFormaggi = pizzeDataTable[1].id;
     const regina = pizzeDataTable[2].id;
 
-    let idGenerator;
-    let orderRepository;
-    let pizzeriaRepository;
-    let customerRepository;
-    let menuRepository;
-    let pizzaRecipeRepository;
-    let ingredientInventoryRepository;
+    let placeAnOrder;
+    let eventDispatcher;
     let paymentClient;
-    let orderAPizza;
+    let orderRepository;
 
     beforeEach(function () {
-        idGenerator = new IdGenerator();
-        orderRepository = new OrderRepository();
-        pizzeriaRepository = new PizzeriaRepository();
-        customerRepository = new CustomerRepository();
-        paymentClient = new SuccessfulPaymentClientForTest();
-        orderAPizza = new OrderAPizza(
-            idGenerator,
-            orderRepository,
-            pizzeriaRepository,
-            customerRepository,
-            paymentClient
-        );
+        paymentClient = new PaymentClientForTest();
+        orderRepository = new OrderRepositoryForTest();
+        const orderManagementDI = new OrderManagementDependenciesInjectionForTest(orderRepository);
+        const orderPreparationDI = new OrderPreparationDependenciesInjection();
+        const paymentDI = new PaymentDependenciesInjectionForTest(paymentClient);
+
+        eventDispatcher = new EventDispatcherForTest();
+        placeAnOrder = orderManagementDI.providePlaceAnOrderUsecase();
+
+        const orderPlacedEventHandler = orderPreparationDI.provideOrderPlacedEventHandler();
+        eventDispatcher.subscribe(orderPlacedEventHandler, OrderPlacedEvent);
+
+        const orderAcceptedEventHandler = paymentDI.provideOrderAcceptedEventHandler();
+        eventDispatcher.subscribe(orderAcceptedEventHandler, OrderAcceptedEvent);
+
+        const paymentSucceededEventHandler = orderPreparationDI.providePaymentSucceededEventHandler();
+        eventDispatcher.subscribe(paymentSucceededEventHandler, PaymentSucceededEvent);
+
+        const orderRejectedEventHandler = orderManagementDI.provideOrderRejectedEventHandler();
+        eventDispatcher.subscribe(orderRejectedEventHandler, OrderRejectedEvent);
+
+        const paymentFailedEventHandler = orderManagementDI.providePaymentFailedEventHandler();
+        eventDispatcher.subscribe(paymentFailedEventHandler, PaymentFailedEvent);
+
+        const orderPreparedEventHandler = orderManagementDI.provideOrderPreparedEventHandler();
+        eventDispatcher.subscribe(orderPreparedEventHandler, OrderPreparedEvent);
+
     });
 
-    describe('When pizzeria is found', function() {
-        describe('When customer is found', function() {
-            describe('When pizza is on the menu', function() {
-                describe('When enough ingredients', function() {
-                    describe('When payment succeeds', function() {
-                        it('should record the order', function() {
+    describe('When pizzeria is found', function () {
+
+        describe('When customer is found', function () {
+
+            describe('When pizza is on the menu', function () {
+
+                describe('When enough ingredients', function () {
+
+                    describe('When payment succeeds', function () {
+
+                        it('should record the order', function () {
                             // given
-                            const command = new OrderAPizzaCommand(
+                            const command = new PlaceAnOrderCommand(
                                 pizzeriaDaMarco.id,
                                 customer.id,
                                 margherita
                             );
 
                             // when
-                            const event = orderAPizza.execute(command);
+                            eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                             // then
-                            expect(orderRepository.get(1).isFulfilled()).to.equal(true);
+                            expect(orderRepository.isFulfilled(1)).to.equal(true);
                         });
-                        it('should return a PizzaOrderedEvent', function() {
+
+                        it('should return an OrderFulfilledEvent', function () {
                             // given
-                            const command = new OrderAPizzaCommand(
+                            const command = new PlaceAnOrderCommand(
                                 pizzeriaDaMarco.id,
                                 customer.id,
                                 margherita
                             );
 
                             // when
-                            const event = orderAPizza.execute(command);
+                            eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                             // then
-                            expect(event).to.be.instanceof(PizzaOrderedEvent);
+                            expect(eventDispatcher.hasDispatchedEvent(OrderFulfilledEvent)).to.be.true;
                         });
-                        it('should perform payment', function() {
+
+                        it('should perform payment', function () {
                             // given
-                            const command = new OrderAPizzaCommand(
+                            const command = new PlaceAnOrderCommand(
                                 pizzeriaDaMarco.id,
                                 customer.id,
                                 margherita
                             );
 
                             // when
-                            const event = orderAPizza.execute(command);
+                            eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                             // then
                             expect(paymentClient.hasPaymentBeenPerformed(customer.iban, pizzeriaDaMarco.iban, margheritaPriceAtDaMarco))
                         });
-                        it('should affect inventory', function() {
+
+                        it('should affect inventory', function () {
                             // given
-                            const command = new OrderAPizzaCommand(pizzeriaDaMarco.id, customer.id, margherita);
+                            const command = new PlaceAnOrderCommand(pizzeriaDaMarco.id, customer.id, margherita);
 
                             // when
                             let event = null;
                             for (let i = 0; i <= 3; i++) {
-                                event = orderAPizza.execute(command);
+                                eventDispatcher.dispatch(placeAnOrder.execute(command));
                             }
 
                             // then
-                            expect(event).to.be.instanceof(NotEnoughIngredientsEvent);
+                            expect(eventDispatcher.hasDispatchedEvent(NotEnoughIngredientsEvent)).to.be.true;
                         });
                     });
-                    describe('When payment fails', function() {
-                        it('should return a PaymentFailedEvent', function() {
+
+                    describe('When payment fails', function () {
+
+                        it('should return a PaymentFailedEvent', function () {
                             // given
-                            let paymentClient = new FaultyPaymentClientForTest();
-                            let orderAPizza = new OrderAPizza(
-                                idGenerator,
-                                orderRepository,
-                                pizzeriaRepository,
-                                customerRepository,
-                                menuRepository,
-                                pizzaRecipeRepository,
-                                ingredientInventoryRepository,
-                                paymentClient
-                            );
-                            const command = new OrderAPizzaCommand(
+                            paymentClient.setIsFaulty(true);
+                            const command = new PlaceAnOrderCommand(
                                 pizzeriaDaMarco.id,
                                 customer.id,
                                 margherita
                             );
 
                             // when
-                            const event = orderAPizza.execute(command);
+                            eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                             // then
-                            expect(event).to.be.instanceof(PaymentFailedEvent);
+                            expect(eventDispatcher.hasDispatchedEvent(PaymentFailedEvent)).to.be.true;
                         });
                     });
                 });
-                describe('When not enough ingredients', function() {
-                    it('should return a NotEnoughIngredientsEvent', function() {
+                describe('When not enough ingredients', function () {
+
+                    it('should return a NotEnoughIngredientsEvent', function () {
                         // given
-                        const command = new OrderAPizzaCommand(
+                        const command = new PlaceAnOrderCommand(
                             pizzeriaDaMarco.id,
                             customer.id,
                             quattroFormaggi
                         );
 
                         // when
-                        const event = orderAPizza.execute(command);
+                        eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                         // then
-                        expect(event).to.be.instanceof(NotEnoughIngredientsEvent);
+                        expect(eventDispatcher.hasDispatchedEvent(NotEnoughIngredientsEvent)).to.be.true;
                     });
                 });
             });
-            describe('When pizza is not on the menu', function() {
-                it('should return a PizzaNotOnTheMenuEvent', function() {
+
+            describe('When pizza is not on the menu', function () {
+
+                it('should return a PizzaNotOnTheMenuEvent', function () {
                     // given
-                    const command = new OrderAPizzaCommand(
+                    const command = new PlaceAnOrderCommand(
                         pizzeriaDaMarco.id,
                         customer.id,
                         regina
                     );
 
                     // when
-                    const event = orderAPizza.execute(command);
+                    eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                     // then
-                    expect(event).to.be.instanceof(PizzaNotOnTheMenuEvent);
+                    expect(eventDispatcher.hasDispatchedEvent(PizzaNotOnTheMenuEvent)).to.be.true;
                 });
             });
         });
-        describe('When customer it not found', function() {
-            it('should return a CustomerNotFoundEvent', function() {
+        describe('When customer it not found', function () {
+
+            it('should dispatch a CustomerNotFoundEvent', function () {
                 // given
-                const command = new OrderAPizzaCommand(
+                const command = new PlaceAnOrderCommand(
                     pizzeriaDaMarco.id,
                     Symbol('unknown customer')
                 );
 
                 // when
-                const event = orderAPizza.execute(command);
+                eventDispatcher.dispatch(placeAnOrder.execute(command));
 
                 // then
-                expect(event).to.be.instanceof(CustomerNotFoundEvent);
+                expect(eventDispatcher.hasDispatchedEvent(CustomerNotFoundEvent)).to.be.true;
             });
         });
     });
-    describe('When pizzeria is not found', function() {
-        it('should return a PizzeriaNotFoundEvent', function() {
+    describe('When pizzeria is not found', function () {
+
+        it('should dispatch a PizzeriaNotFoundEvent', function () {
             // given
-            const command = new OrderAPizzaCommand(
+            const command = new PlaceAnOrderCommand(
                 Symbol("unknown pizzeria")
             );
 
             // when
-            const event = orderAPizza.execute(command);
+            eventDispatcher.dispatch(placeAnOrder.execute(command));
 
             // then
-            expect(event).to.be.instanceof(PizzeriaNotFoundEvent);
+            expect(eventDispatcher.hasDispatchedEvent(PizzeriaNotFoundEvent)).to.be.true;
         });
     });
 });
 
-class SuccessfulPaymentClientForTest extends PaymentClient {
+class PaymentDependenciesInjectionForTest extends PaymentDependenciesInjection {
+    constructor(paymentClient) {
+        super();
+        this.paymentClient = paymentClient;
+    }
+
+    _providePaymentClient() {
+        return this.paymentClient;
+    }
+}
+
+
+class PaymentClientForTest extends PaymentClient {
     #payments = [];
+    #isFaulty = false;
 
     hasPaymentBeenPerformed(customerIban, pizzeriaIban, amount) {
         return this.#payments.find(
@@ -217,8 +251,12 @@ class SuccessfulPaymentClientForTest extends PaymentClient {
         ) != null;
     }
 
+    setIsFaulty(isFaulty) {
+        this.#isFaulty = isFaulty;
+    }
+
     pay(customerIban, pizzeriaIban, amount) {
-        if (customerIban == null) {
+        if (this.#isFaulty) {
             throw new Error('payment failed');
         } else {
             this.#payments.push({customerIban, pizzeriaIban, amount});
@@ -226,8 +264,32 @@ class SuccessfulPaymentClientForTest extends PaymentClient {
     }
 }
 
-class FaultyPaymentClientForTest extends PaymentClient {
-    pay(customerIban, pizzeriaIban, amount) {
-        throw new Error('payment failed');
+class OrderManagementDependenciesInjectionForTest extends OrderManagementDependenciesInjection {
+    constructor(orderRepository) {
+        super();
+        this.orderRepository = orderRepository;
+    }
+    _provideOrderRepository() {
+        return this.orderRepository;
+    }
+}
+
+class OrderRepositoryForTest extends OrderRepository {
+    isFulfilled(orderId) {
+        const order = this.get(orderId);
+        return Boolean(order != null && order.isFulfilled())
+    }
+}
+
+class EventDispatcherForTest extends EventDispatcher {
+    #eventsDispatched = [];
+
+    dispatch(eventToBeDispatched) {
+        this.#eventsDispatched.push(eventToBeDispatched);
+        super.dispatch(eventToBeDispatched);
+    }
+
+    hasDispatchedEvent(event) {
+        return Boolean(this.#eventsDispatched.find(e => e instanceof event));
     }
 }
