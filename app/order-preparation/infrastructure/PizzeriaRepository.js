@@ -43,7 +43,7 @@ module.exports = class PizzeriaRepository {
         return new Pizzeria(
             pizzeriaDTO.id,
             pizzeriaDTO.name,
-            pizzeriaDTO.rib,
+            pizzeriaDTO.iban,
             menu,
             inventory
         )

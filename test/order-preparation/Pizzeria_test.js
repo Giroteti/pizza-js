@@ -22,7 +22,7 @@ describe('Pizzeria', function () {
                 new Pizzeria(
                     null,
                     "Da Marco",
-                    "rib",
+                    "iban",
                     [Symbol("menu item")],
                     new Inventory([])
                 )
@@ -33,7 +33,7 @@ describe('Pizzeria', function () {
                 new Pizzeria(
                     1,
                     null,
-                    "rib",
+                    "iban",
                     [Symbol("menu item")],
                     new Inventory([])
                 )
@@ -55,7 +55,7 @@ describe('Pizzeria', function () {
                 new Pizzeria(
                     1,
                     "Da Marco",
-                    "rib",
+                    "iban",
                     null,
                     new Inventory([])
                 )
@@ -66,7 +66,7 @@ describe('Pizzeria', function () {
                 new Pizzeria(
                     1,
                     "Da Marco",
-                    "rib",
+                    "iban",
                     [],
                     new Inventory([])
                 )
@@ -77,7 +77,7 @@ describe('Pizzeria', function () {
                 new Pizzeria(
                     1,
                     "Da Marco",
-                    "rib",
+                    "iban",
                     [Symbol("menu item")],
                     "inventory"
                 )
@@ -90,7 +90,7 @@ describe('Pizzeria', function () {
             pizzeria = new Pizzeria(
                 1,
                 "Da Marco",
-                "rib",
+                "iban",
                 [
                     new MenuItem(
                         margherita, 10

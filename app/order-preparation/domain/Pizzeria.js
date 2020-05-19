@@ -3,19 +3,19 @@ const _ = require("lodash");
 class Pizzeria {
     id
     name
-    rib
+    iban
     #menu = []
     #inventory
 
-    constructor(id, name, rib, menu, inventory) {
+    constructor(id, name, iban, menu, inventory) {
         if (id == null) {
             throw new Error("id should not be null");
         }
         if (name == null) {
             throw new Error("name should not be null");
         }
-        if (rib == null) {
-            throw new Error("rib should not be null");
+        if (iban == null) {
+            throw new Error("iban should not be null");
         }
         if (!Array.isArray(menu) || menu.length === 0) {
             throw new Error("menu should be an array");
@@ -25,7 +25,7 @@ class Pizzeria {
         }
         this.id = id;
         this.name = name;
-        this.rib = rib;
+        this.iban = iban;
         menu.forEach(i => this.#menu[i.pizzaId] = i);
         this.#inventory = inventory;
     }

@@ -14,8 +14,8 @@ module.exports = class OrderAcceptedEventHandler {
         const customer = this.customerRepository.get(orderAcceptedEvent.customerId);
         try {
             this.paymentClient.pay(
-                customer.rib,
-                pizzeria.rib,
+                customer.iban,
+                pizzeria.iban,
                 orderAcceptedEvent.pizzaPrice
             );
             event = new PaymentSucceededEvent(orderAcceptedEvent.orderId);
