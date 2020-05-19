@@ -1,5 +1,5 @@
 module.exports = class PaymentClient {
-    pay(customerRib, pizzeriaRib, amount) {
+    pay(customerIban, pizzeriaIban, amount) {
         throw new Error("To be implemented");
     }
 }

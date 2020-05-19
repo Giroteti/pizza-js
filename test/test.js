@@ -106,7 +106,7 @@ describe('Order a pizza', function () {
                             const event = orderAPizza.execute(command);
 
                             // then
-                            expect(paymentClient.hasPaymentBeenPerformed(customer.rib, pizzeriaDaMarco.rib, margheritaPriceAtDaMarco))
+                            expect(paymentClient.hasPaymentBeenPerformed(customer.iban, pizzeriaDaMarco.iban, margheritaPriceAtDaMarco))
                         });
                         it('should affect inventory', function() {
                             // given
@@ -230,25 +230,25 @@ class OrderRepositoryForTest extends OrderRepository {
 class SuccessfulPaymentClientForTest extends PaymentClient {
     #payments = [];
 
-    hasPaymentBeenPerformed(customerRib, pizzeriaRib, amount) {
+    hasPaymentBeenPerformed(customerIban, pizzeriaIban, amount) {
         return this.#payments.find(
-            p => p.customerRib === customerRib
-                && p.pizzeriaRib === pizzeriaRib
+            p => p.customerIban === customerIban
+                && p.pizzeriaIban === pizzeriaIban
                 && p.amount === amount
         ) != null;
     }
 
-    pay(customerRib, pizzeriaRib, amount) {
-        if (customerRib == null) {
+    pay(customerIban, pizzeriaIban, amount) {
+        if (customerIban == null) {
             throw new Error('payment failed');
         } else {
-            this.#payments.push({customerRib, pizzeriaRib, amount});
+            this.#payments.push({customerIban, pizzeriaIban, amount});
         }
     }
 }
 
 class FaultyPaymentClientForTest extends PaymentClient {
-    pay(customerRib, pizzeriaRib, amount) {
+    pay(customerIban, pizzeriaIban, amount) {
         throw new Error('payment failed');
     }
 }

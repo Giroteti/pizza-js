@@ -70,7 +70,7 @@ module.exports = {
             this.ingredientInventoryRepository.decrementIngredientsOfPizzeria(command.pizzeriaId, recipe);
 
             try {
-                this.paymentClient.pay(customer.rib, pizzeria.rib, pizza.price);
+                this.paymentClient.pay(customer.iban, pizzeria.iban, pizza.price);
             } catch (e) {
                 order.status = OrderStatuses.ON_ERROR;
                 this.orderRepository.save(order);
