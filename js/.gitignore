@@ -109,7 +109,7 @@ tmp/
 temp/
 
 # IntelliJ
-.idea/*
+../.idea/vcs.xml
 
 # End of https://www.gitignore.io/api/node
 
