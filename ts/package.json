@@ -1,0 +1,26 @@
+{
+  "name": "Pizza",
+  "version": "0.0.1",
+  "description": "kata about domain modeling",
+  "main": "index.ts",
+  "author": "me",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@types/jest": "^23.3.1",
+    "@types/node": "^10.5.8",
+    "jest": "^26.4.2",
+    "lodash": "^4.17.21",
+    "ts-jest": "^26.5.3",
+    "ts-node": "^7.0.0",
+    "typescript": "^3.0.1"
+  },
+  "scripts": {
+    "start": "node node_modules/ts-node/dist/bin.js app/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.168"
+  }
+}
