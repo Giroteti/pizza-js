@@ -19,5 +19,8 @@
     "start": "node node_modules/ts-node/dist/bin.js app/index.ts",
     "test": "jest",
     "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.168"
   }
 }

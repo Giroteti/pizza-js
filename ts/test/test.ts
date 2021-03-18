@@ -9,7 +9,7 @@ import { MenuRepository } from '../app/infrastructure/MenuRepository'
 import { IngredientInventoryRepository } from '../app/infrastructure/IngredientInventoryRepository'
 import { Order, OrderStatuses } from '../app/domain/Order'
 import { OrderRepository } from '../app/infrastructure/InMemoryOrderRepository'
-import { PaymentClient } from '../app/infrastructure/PaymentClient'
+import { PaymentClient, PaymentClientDataObject } from '../app/infrastructure/PaymentClient'
 import { PizzaRecipeRepository } from '../app/infrastructure/PizzaRecipeRepository'
 import { OrderAPizza, OrderAPizzaCommand } from '../app/usecases/OrderAPizza'
 import { CustomerNotFoundEvent } from '../app/domain/CustomerNotFoundEvent'
@@ -30,15 +30,15 @@ describe('Order a pizza ts', () => {
     const quattroFormaggi = pizzeDataTable[1].id;
     const regina = pizzeDataTable[2].id;
 
-    let idGenerator;
-    let orderRepository;
-    let pizzeriaRepository;
-    let customerRepository;
-    let menuRepository;
-    let pizzaRecipeRepository;
-    let ingredientInventoryRepository;
-    let paymentClient;
-    let orderAPizza;
+    let idGenerator: IdGenerator
+    let orderRepository: OrderRepositoryForTest
+    let pizzeriaRepository: PizzeriaRepository
+    let customerRepository: CustomerRepository
+    let menuRepository: MenuRepository
+    let pizzaRecipeRepository: PizzaRecipeRepository
+    let ingredientInventoryRepository: IngredientInventoryRepository
+    let paymentClient: SuccessfulPaymentClientForTest
+    let orderAPizza: OrderAPizza;
 
     beforeEach(function () {
         idGenerator = new IdGenerator();
@@ -186,10 +186,11 @@ describe('Order a pizza ts', () => {
         });
         describe('When customer it not found', function() {
             it('should return a CustomerNotFoundEvent', function() {
+                const unknowCustomer = -1
                 // given
                 const command = new OrderAPizzaCommand(
                     pizzeriaDaMarco.id,
-                    Symbol('unknown customer'),
+                    unknowCustomer,
                     null
                 );
 
@@ -204,8 +205,9 @@ describe('Order a pizza ts', () => {
     describe('When pizzeria is not found', function() {
         it('should return a PizzeriaNotFoundEvent', function() {
             // given
+            const unknowPizzeria = -1
             const command = new OrderAPizzaCommand(
-                Symbol("unknown pizzeria"), null,null
+                unknowPizzeria, null,null
             );
 
             // when
@@ -224,7 +226,7 @@ class OrderRepositoryForTest implements OrderRepository{
         this.dataSource.push(order)
     }
 
-    getOrderStatus(orderId): OrderStatuses | null {
+    getOrderStatus(orderId: number): OrderStatuses | null {
         const orderDataObject = this.dataSource.find(o => o.id === orderId);
         if (orderDataObject != null) {
             return orderDataObject.status;
@@ -235,7 +237,7 @@ class OrderRepositoryForTest implements OrderRepository{
 }
 
 class SuccessfulPaymentClientForTest extends PaymentClient {
-    private payments = [];
+    private payments: PaymentClientDataObject[] = [];
 
     hasPaymentBeenPerformed(customerIban: string, pizzeriaIban: string, amount: number): boolean {
         return Boolean(this.payments.find(

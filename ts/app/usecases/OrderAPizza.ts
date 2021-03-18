@@ -5,18 +5,27 @@ import { PizzaNotOnTheMenuEvent } from '../domain/PizzaNotOnTheMenuEvent'
 import { PizzaOrderedEvent } from '../domain/PizzaOrderedEvent'
 import { NotEnoughIngredientsEvent } from '../domain/NotEnoughIngredientsEvent'
 import { PaymentFailedEvent } from '../domain/PaymentFailedEvent'
+import { IdGenerator } from '../infrastructure/IdGenerator'
+import { OrderRepository } from '../infrastructure/InMemoryOrderRepository'
+import { PizzeriaRepository } from '../infrastructure/PizzeriaRepository'
+import { CustomerRepository } from '../infrastructure/CustomerRepository'
+import { MenuRepository } from '../infrastructure/MenuRepository'
+import { PizzaRecipeRepository } from '../infrastructure/PizzaRecipeRepository'
+import { IngredientInventoryRepository } from '../infrastructure/IngredientInventoryRepository'
+import { PaymentClient } from '../infrastructure/PaymentClient'
 
 export class OrderAPizza {
     constructor(
-        private readonly idGenerator,
-        private readonly orderRepository,
-        private readonly pizzeriaRepository,
-        private readonly customerRepository,
-        private readonly menuRepository,
-        private readonly pizzaRecipeRepository,
-        private readonly ingredientInventoryRepository,
-        private readonly paymentClient,
+        private readonly idGenerator: IdGenerator,
+        private readonly orderRepository: OrderRepository,
+        private readonly pizzeriaRepository: PizzeriaRepository,
+        private readonly customerRepository: CustomerRepository,
+        private readonly menuRepository: MenuRepository,
+        private readonly pizzaRecipeRepository: PizzaRecipeRepository,
+        private readonly ingredientInventoryRepository: IngredientInventoryRepository,
+        private readonly paymentClient: PaymentClient,
     ) {}
+
     execute(command: OrderAPizzaCommand) {
         const order = new Order(this.idGenerator.next(), command.customerId, command.pizzeriaId, command.pizzaFlavor);
         const pizzeria = this.pizzeriaRepository.get(command.pizzeriaId);
@@ -70,8 +79,8 @@ export class OrderAPizza {
 
 export class OrderAPizzaCommand{
     constructor(
-        readonly pizzeriaId,
-        readonly customerId,
-        readonly pizzaFlavor
+        public readonly pizzeriaId: number,
+        public readonly customerId: number,
+        public readonly pizzaFlavor: number
     ) {}
 }

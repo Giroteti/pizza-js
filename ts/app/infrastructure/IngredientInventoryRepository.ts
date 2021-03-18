@@ -1,19 +1,21 @@
 import { inventoriesDataTable } from './tables/inventories'
-import { PizzaDataObject } from './tables/pizze'
 import * as _ from 'lodash'
+
+interface IngredientInventoryDataObject {
+    ingredientId: number;
+    quantity: number
+}
 
 export class IngredientInventoryRepository {
     private dataSource = _.cloneDeep(inventoriesDataTable);
 
-    getByPizzeriaId(pizzeriaId: number): PizzaDataObject {
+    getByPizzeriaId(pizzeriaId: number): IngredientInventoryDataObject[] {
         return this.dataSource
             .filter(i => i.pizzeriaId === pizzeriaId)
-            .map(i => {
-                return {
-                    ingredientId: i.ingredientId,
-                    quantity: i.quantity
-                }
-            });
+            .map(i => ({
+                ingredientId: i.ingredientId,
+                quantity: i.quantity
+            }));
     }
 
     decrementIngredientsOfPizzeria(pizzeriaId: number, ingredients: any): void {

@@ -1,6 +1,6 @@
-import _ from "lodash"
 import { OrderDataObject, ordersDataTable } from './tables/orders'
 import { Order } from '../domain/Order'
+import * as _ from 'lodash'
 
 export interface OrderRepository {
     readonly dataSource: OrderDataObject[]
